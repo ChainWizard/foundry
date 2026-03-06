@@ -3172,7 +3172,7 @@ Error: script failed: call to non-contract address [..]
 "#]]);
 });
 
-// Test that --verify without --broadcast fails with a clear error message
+// Test that --verify without --broadcast/--resume fails with a clear error message.
 forgetest!(verify_without_broadcast_fails, |prj, cmd| {
     let script = prj.add_source(
         "Counter",
@@ -3196,12 +3196,7 @@ contract CounterScript is Script {
     ])
     .assert_failure()
     .stderr_eq(str![[r#"
-error: the following required arguments were not provided:
-  --broadcast
-
-Usage: [..] script --broadcast --verify --fork-url <URL> <PATH> [ARGS]...
-
-For more information, try '--help'.
+Error: `--verify` requires `--broadcast` or `--resume`
 
 "#]]);
 });

@@ -190,7 +190,9 @@ pub struct ScriptArgs {
     pub etherscan_api_key: Option<String>,
 
     /// Verifies all the contracts found in the receipts of a script, if any.
-    #[arg(long, requires = "broadcast")]
+    ///
+    /// This requires either `--broadcast` or `--resume`.
+    #[arg(long)]
     pub verify: bool,
 
     /// Gas price for legacy transactions, or max fee per gas for EIP1559 transactions, either
@@ -226,7 +228,16 @@ pub struct ScriptArgs {
 }
 
 impl ScriptArgs {
+    fn validate_verify_broadcast_mode(&self) -> Result<()> {
+        if self.verify && !self.broadcast && !self.resume {
+            eyre::bail!("`--verify` requires `--broadcast` or `--resume`");
+        }
+        Ok(())
+    }
+
     pub async fn preprocess(self) -> Result<PreprocessedState> {
+        self.validate_verify_broadcast_mode()?;
+
         let script_wallets = Wallets::new(self.wallets.get_multi_wallet().await?, self.evm.sender);
 
         let (config, mut evm_opts) = self.load_config_and_evm_opts()?;
@@ -771,6 +782,22 @@ mod tests {
             args.verifier.verifier_url,
             Some("http://localhost:3000/api/verify".to_string())
         );
+    }
+
+    #[test]
+    fn can_parse_verify_with_resume() {
+        let args = ScriptArgs::parse_from([
+            "foundry-cli",
+            "script",
+            "script/Test.s.sol:TestScript",
+            "--fork-url",
+            "http://localhost:8545",
+            "--resume",
+            "--verify",
+            "-vvvvv",
+        ]);
+        assert!(args.verify);
+        assert!(args.resume);
     }
 
     #[test]
